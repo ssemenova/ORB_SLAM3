@@ -61,6 +61,7 @@ public:
    
     ORB_SLAM3::System* mpSLAM;
     ImuGrabber *mpImuGb;
+    float imageScale;
 
     const bool do_rectify;
     cv::Mat M1l,M2l,M1r,M2r;
@@ -94,57 +95,69 @@ int main(int argc, char **argv)
 
   // Create SLAM system. It initializes all system threads and gets ready to process frames.
   ORB_SLAM3::System SLAM(argv[1],argv[2],ORB_SLAM3::System::IMU_STEREO,true);
+  float imageScale = SLAM.GetImageScale();
 
   ImuGrabber imugb;
   ImageGrabber igb(&SLAM,&imugb,sbRect == "true",bEqual);
-  
-    if(igb.do_rectify)
-    {      
-        // Load settings related to stereo calibration
-        cv::FileStorage fsSettings(argv[2], cv::FileStorage::READ);
-        if(!fsSettings.isOpened())
-        {
-            cerr << "ERROR: Wrong path to settings" << endl;
-            return -1;
-        }
 
-        cv::Mat K_l, K_r, P_l, P_r, R_l, R_r, D_l, D_r;
-        fsSettings["LEFT.K"] >> K_l;
-        fsSettings["RIGHT.K"] >> K_r;
+    // if(igb.do_rectify)
+    // {      
+    //     // Load settings related to stereo calibration
+    //     cv::FileStorage fsSettings(argv[2], cv::FileStorage::READ);
+    //     if(!fsSettings.isOpened())
+    //     {
+    //         cerr << "ERROR: Wrong path to settings" << endl;
+    //         return -1;
+    //     }
 
-        fsSettings["LEFT.P"] >> P_l;
-        fsSettings["RIGHT.P"] >> P_r;
+    //     cv::Mat K_l, K_r, P_l, P_r, R_l, R_r, D_l, D_r;
+    //     fsSettings["LEFT.K"] >> K_l;
+    //     fsSettings["RIGHT.K"] >> K_r;
 
-        fsSettings["LEFT.R"] >> R_l;
-        fsSettings["RIGHT.R"] >> R_r;
+    //     fsSettings["LEFT.P"] >> P_l;
+    //     fsSettings["RIGHT.P"] >> P_r;
 
-        fsSettings["LEFT.D"] >> D_l;
-        fsSettings["RIGHT.D"] >> D_r;
+    //     fsSettings["LEFT.R"] >> R_l;
+    //     fsSettings["RIGHT.R"] >> R_r;
 
-        int rows_l = fsSettings["LEFT.height"];
-        int cols_l = fsSettings["LEFT.width"];
-        int rows_r = fsSettings["RIGHT.height"];
-        int cols_r = fsSettings["RIGHT.width"];
+    //     fsSettings["LEFT.D"] >> D_l;
+    //     fsSettings["RIGHT.D"] >> D_r;
 
-        if(K_l.empty() || K_r.empty() || P_l.empty() || P_r.empty() || R_l.empty() || R_r.empty() || D_l.empty() || D_r.empty() ||
-                rows_l==0 || rows_r==0 || cols_l==0 || cols_r==0)
-        {
-            cerr << "ERROR: Calibration parameters to rectify stereo are missing!" << endl;
-            return -1;
-        }
+    //     int rows_l = fsSettings["LEFT.height"];
+    //     int cols_l = fsSettings["LEFT.width"];
+    //     int rows_r = fsSettings["RIGHT.height"];
+    //     int cols_r = fsSettings["RIGHT.width"];
 
-        cv::initUndistortRectifyMap(K_l,D_l,R_l,P_l.rowRange(0,3).colRange(0,3),cv::Size(cols_l,rows_l),CV_32F,igb.M1l,igb.M2l);
-        cv::initUndistortRectifyMap(K_r,D_r,R_r,P_r.rowRange(0,3).colRange(0,3),cv::Size(cols_r,rows_r),CV_32F,igb.M1r,igb.M2r);
-    }
+    //     if(K_l.empty() || K_r.empty() || P_l.empty() || P_r.empty() || R_l.empty() || R_r.empty() || D_l.empty() || D_r.empty() ||
+    //             rows_l==0 || rows_r==0 || cols_l==0 || cols_r==0)
+    //     {
+    //         cerr << "ERROR: Calibration parameters to rectify stereo are missing!" << endl;
+    //         return -1;
+    //     }
+
+    //     cv::initUndistortRectifyMap(K_l,D_l,R_l,P_l.rowRange(0,3).colRange(0,3),cv::Size(cols_l,rows_l),CV_32F,igb.M1l,igb.M2l);
+    //     cv::initUndistortRectifyMap(K_r,D_r,R_r,P_r.rowRange(0,3).colRange(0,3),cv::Size(cols_r,rows_r),CV_32F,igb.M1r,igb.M2r);
+    // }
 
   // Maximum delay, 5 seconds
-  ros::Subscriber sub_imu = n.subscribe("/imu", 1000, &ImuGrabber::GrabImu, &imugb); 
-  ros::Subscriber sub_img_left = n.subscribe("/camera/left/image_raw", 100, &ImageGrabber::GrabImageLeft,&igb);
-  ros::Subscriber sub_img_right = n.subscribe("/camera/right/image_raw", 100, &ImageGrabber::GrabImageRight,&igb);
+  ros::Subscriber sub_imu = n.subscribe("/imu0", 1000, &ImuGrabber::GrabImu, &imugb); 
+  ros::Subscriber sub_img_left = n.subscribe("/cam0/image_raw", 100, &ImageGrabber::GrabImageLeft,&igb);
+  ros::Subscriber sub_img_right = n.subscribe("/cam1/image_raw", 100, &ImageGrabber::GrabImageRight,&igb);
 
   std::thread sync_thread(&ImageGrabber::SyncWithImu,&igb);
 
   ros::spin();
+
+    // Stop all threads
+    SLAM.Shutdown();
+
+    // Save camera trajectory
+    SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory_TUM_Format.txt");
+    SLAM.SaveTrajectoryTUM("FrameTrajectory_TUM_Format.txt");
+    SLAM.SaveTrajectoryKITTI("FrameTrajectory_KITTI_Format.txt");
+
+    ros::shutdown();
+
 
   return 0;
 }
@@ -255,17 +268,18 @@ void ImageGrabber::SyncWithImu()
         }
       }
       mpImuGb->mBufMutex.unlock();
-      if(mbClahe)
-      {
-        mClahe->apply(imLeft,imLeft);
-        mClahe->apply(imRight,imRight);
-      }
+    //   if(mbClahe)
+    //   {
+    //     mClahe->apply(imLeft,imLeft);
+    //     mClahe->apply(imRight,imRight);
+    //   }
 
-      if(do_rectify)
-      {
-        cv::remap(imLeft,imLeft,M1l,M2l,cv::INTER_LINEAR);
-        cv::remap(imRight,imRight,M1r,M2r,cv::INTER_LINEAR);
-      }
+    //   if(do_rectify)
+    //   {
+    //       cout << imLeft << endl;
+    //     cv::remap(imLeft,imLeft,M1l,M2l,cv::INTER_LINEAR);
+    //     cv::remap(imRight,imRight,M1r,M2r,cv::INTER_LINEAR);
+    //   }
 
       mpSLAM->TrackStereo(imLeft,imRight,tImLeft,vImuMeas);
 

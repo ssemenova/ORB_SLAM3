@@ -73,6 +73,8 @@ void LocalMapping::Run()
         // Check if there are keyframes in the queue
         if(CheckNewKeyFrames() && !mbBadImu)
         {
+        auto timer_start = std::chrono::high_resolution_clock::now();
+
 #ifdef REGISTER_TIMES
             double timeLBA_ms = 0;
             double timeKFCulling_ms = 0;
@@ -255,6 +257,12 @@ void LocalMapping::Run()
             double timeLocalMap = std::chrono::duration_cast<std::chrono::duration<double,std::milli> >(time_EndLocalMap - time_StartProcessKF).count();
             vdLMTotal_ms.push_back(timeLocalMap);
 #endif
+            auto timer_end = std::chrono::high_resolution_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(timer_end - timer_start);
+            auto tid = std::this_thread::get_id();
+            if (duration.count() > 0) {
+                std::cout << "Sofiya,local mapping total," << duration.count() << endl;
+            }
         }
         else if(Stop() && !mbBadImu)
         {
@@ -263,8 +271,9 @@ void LocalMapping::Run()
             {
                 usleep(3000);
             }
-            if(CheckFinish())
+            if(CheckFinish()) {
                 break;
+            }
         }
 
         ResetIfRequested();

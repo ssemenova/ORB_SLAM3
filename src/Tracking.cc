@@ -1490,6 +1490,8 @@ Sophus::SE3f Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat 
 
     //cout << "Incoming frame creation" << endl;
 
+    auto trackstart = std::chrono::high_resolution_clock::now();
+
     if (mSensor == System::STEREO && !mpCamera2)
         mCurrentFrame = Frame(mImGray,imGrayRight,timestamp,mpORBextractorLeft,mpORBextractorRight,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth,mpCamera);
     else if(mSensor == System::STEREO && mpCamera2)
@@ -1500,6 +1502,7 @@ Sophus::SE3f Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat 
         mCurrentFrame = Frame(mImGray,imGrayRight,timestamp,mpORBextractorLeft,mpORBextractorRight,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth,mpCamera,mpCamera2,mTlr,&mLastFrame,*mpImuCalib);
 
     //cout << "Incoming frame ended" << endl;
+    auto extractionend = std::chrono::high_resolution_clock::now();
 
     mCurrentFrame.mNameFile = filename;
     mCurrentFrame.mnDataset = mnNumDataset;
@@ -1512,6 +1515,14 @@ Sophus::SE3f Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat 
     //cout << "Tracking start" << endl;
     Track();
     //cout << "Tracking end" << endl;
+
+    auto trackend = std::chrono::high_resolution_clock::now();
+    auto end_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(trackend.time_since_epoch());
+    auto totald = std::chrono::duration_cast<std::chrono::milliseconds>(trackend - trackstart);
+    auto extractiond = std::chrono::duration_cast<std::chrono::milliseconds>(extractionend - trackstart);
+    auto trackd = std::chrono::duration_cast<std::chrono::milliseconds>(trackend - extractionend);
+    std::string print = std::string("Sofiya,tracking total,") + to_string(totald.count()) + ",extraction only," + to_string(extractiond.count()) + ",tracking only," + to_string(trackd.count())  + ",timestamp," + to_string(end_timestamp.count()) + "\n";
+    std::cout << print << std::endl;
 
     return mCurrentFrame.GetPose();
 }
@@ -3076,15 +3087,6 @@ bool Tracking::NeedNewKeyFrame()
     if(mbOnlyTracking)
         return false;
 
-    // If Local Mapping is freezed by a Loop Closure do not insert keyframes
-    if(mpLocalMapper->isStopped() || mpLocalMapper->stopRequested()) {
-        /*if(mSensor == System::MONOCULAR)
-        {
-            std::cout << "NeedNewKeyFrame: localmap stopped" << std::endl;
-        }*/
-        return false;
-    }
-
     const int nKFs = mpAtlas->KeyFramesInMap();
 
     // Do not insert keyframes if not enough frames have passed from last relocalisation
@@ -3161,6 +3163,8 @@ bool Tracking::NeedNewKeyFrame()
     // Condition 2: Few tracked points compared to reference keyframe. Lots of visual odometry compared to map matches.
     const bool c2 = (((mnMatchesInliers<nRefMatches*thRefRatio || bNeedToInsertClose)) && mnMatchesInliers>15);
 
+    bool c1b_without_lmidle = mCurrentFrame.mnId>=mnLastKeyFrameId+mMinFrames;
+
     //std::cout << "NeedNewKF: c1a=" << c1a << "; c1b=" << c1b << "; c1c=" << c1c << "; c2=" << c2 << std::endl;
     // Temporal condition for Inertial cases
     bool c3 = false;
@@ -3183,6 +3187,18 @@ bool Tracking::NeedNewKeyFrame()
         c4=true;
     else
         c4=false;
+
+
+    std::cout << "want to insert," << (((c1a || c1b_without_lmidle || c1c) & c2) || c3 || c4)  << endl;
+
+    // If Local Mapping is freezed by a Loop Closure do not insert keyframes
+    if(mpLocalMapper->isStopped() || mpLocalMapper->stopRequested()) {
+        /*if(mSensor == System::MONOCULAR)
+        {
+            std::cout << "NeedNewKeyFrame: localmap stopped" << std::endl;
+        }*/
+        return false;
+    }
 
     if(((c1a||c1b||c1c) && c2)||c3 ||c4)
     {
@@ -3338,6 +3354,9 @@ void Tracking::CreateNewKeyFrame()
 
     mnLastKeyFrameId = mCurrentFrame.mnId;
     mpLastKeyFrame = pKF;
+
+    auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+    std::cout << "Sofiya,created keyframe," << timestamp.count() << endl;
 }
 
 void Tracking::SearchLocalPoints()
@@ -3608,6 +3627,7 @@ void Tracking::UpdateLocalKeyFrames()
 
 bool Tracking::Relocalization()
 {
+    auto relocstart = std::chrono::high_resolution_clock::now();
     Verbose::PrintMess("Starting relocalization", Verbose::VERBOSITY_NORMAL);
     // Compute Bag of Words Vector
     mCurrentFrame.ComputeBoW();
@@ -3762,6 +3782,11 @@ bool Tracking::Relocalization()
             }
         }
     }
+
+    auto relocend = std::chrono::high_resolution_clock::now();
+    auto total_reloc = std::chrono::duration_cast<std::chrono::milliseconds>(relocend - relocstart);
+    std::string print = std::string("Sofiya,relocalization total,") + to_string(total_reloc.count());
+    std::cout << print << endl;
 
     if(!bMatch)
     {

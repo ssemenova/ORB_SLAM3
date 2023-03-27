@@ -95,12 +95,23 @@ int main(int argc, char **argv)
   ImageGrabber igb(&SLAM,&imugb,bEqual); // TODO
   
   // Maximum delay, 5 seconds
-  ros::Subscriber sub_imu = n.subscribe("/imu", 1000, &ImuGrabber::GrabImu, &imugb); 
-  ros::Subscriber sub_img0 = n.subscribe("/camera/image_raw", 100, &ImageGrabber::GrabImage,&igb);
+  ros::Subscriber sub_imu = n.subscribe("/imu0", 1000, &ImuGrabber::GrabImu, &imugb); 
+  ros::Subscriber sub_img0 = n.subscribe("/cam0/image_raw", 100, &ImageGrabber::GrabImage,&igb);
 
   std::thread sync_thread(&ImageGrabber::SyncWithImu,&igb);
 
   ros::spin();
+
+    // Stop all threads
+    SLAM.Shutdown();
+
+    cout << "Saving kf trajectory" << endl;
+    // Save camera trajectory
+    SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory_TUM_Format.txt");
+    SLAM.SaveTrajectoryTUM("FrameTrajectory_TUM_Format.txt");
+    SLAM.SaveTrajectoryKITTI("FrameTrajectory_KITTI_Format.txt");
+
+    ros::shutdown();
 
   return 0;
 }

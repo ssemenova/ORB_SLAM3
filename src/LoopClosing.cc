@@ -100,6 +100,8 @@ void LoopClosing::Run()
 
         if(CheckNewKeyFrames())
         {
+            auto lc_start = std::chrono::high_resolution_clock::now();
+
             if(mpLastCurrentKF)
             {
                 mpLastCurrentKF->mvpLoopCandKFs.clear();
@@ -292,8 +294,15 @@ void LoopClosing::Run()
                     mbLoopDetected = false;
                 }
 
+
+                auto lc_end = std::chrono::high_resolution_clock::now();
+                auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(lc_end.time_since_epoch());
+                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(lc_end - lc_start);
+                std::string print = std::string("Sofiya,loop closing total,") + to_string(duration.count())  + ",ms,timestamp," + to_string(timestamp.count()) + "\n";
+                std::cout << print << endl;
             }
             mpLastCurrentKF = mpCurrentKF;
+
         }
 
         ResetIfRequested();
