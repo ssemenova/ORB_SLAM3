@@ -112,6 +112,7 @@ void LoopClosing::Run()
 #endif
 
             bool bFindedRegion = NewDetectCommonRegions();
+            cout << "Sofiya,loop closing detect common region," << bFindedRegion << endl;
 
 #ifdef REGISTER_TIMES
             std::chrono::steady_clock::time_point time_EndPR = std::chrono::steady_clock::now();
@@ -121,8 +122,11 @@ void LoopClosing::Run()
 #endif
             if(bFindedRegion)
             {
+                cout << "Sofiya,merge detected," << mbMergeDetected << endl;
+
                 if(mbMergeDetected)
                 {
+
                     if ((mpTracker->mSensor==System::IMU_MONOCULAR || mpTracker->mSensor==System::IMU_STEREO || mpTracker->mSensor==System::IMU_RGBD) &&
                         (!mpCurrentKF->GetMap()->isImuInitialized()))
                     {
@@ -351,6 +355,7 @@ bool LoopClosing::NewDetectCommonRegions()
     {
         mpKeyFrameDB->add(mpCurrentKF);
         mpCurrentKF->SetErase();
+        std::cout << "Sofiya,loop closure digging inertial" << std::endl;
         return false;
     }
 
@@ -359,6 +364,7 @@ bool LoopClosing::NewDetectCommonRegions()
         // cout << "LoopClousure: Stereo KF inserted without check: " << mpCurrentKF->mnId << endl;
         mpKeyFrameDB->add(mpCurrentKF);
         mpCurrentKF->SetErase();
+        std::cout << "Sofiya,loop closure digging map size 5" << std::endl;
         return false;
     }
 
@@ -367,6 +373,7 @@ bool LoopClosing::NewDetectCommonRegions()
         // cout << "LoopClousure: Stereo KF inserted without check, map is small: " << mpCurrentKF->mnId << endl;
         mpKeyFrameDB->add(mpCurrentKF);
         mpCurrentKF->SetErase();
+        std::cout << "Sofiya,loop closure digging map size 12" << std::endl;
         return false;
     }
 
@@ -483,6 +490,7 @@ bool LoopClosing::NewDetectCommonRegions()
         vdEstSim3_ms.push_back(timeEstSim3);
 #endif
         mpKeyFrameDB->add(mpCurrentKF);
+        std::cout << "Sofiya,loop closure digging first positive," << mbMergeDetected << "," << mbLoopDetected << std::endl;
         return true;
     }
 
@@ -532,6 +540,7 @@ bool LoopClosing::NewDetectCommonRegions()
 
     if(mbMergeDetected || mbLoopDetected)
     {
+        std::cout << "Sofiya,loop closure digging second positive," << mbMergeDetected << "," << mbLoopDetected << std::endl;
         return true;
     }
 
