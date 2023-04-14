@@ -3193,7 +3193,8 @@ bool Tracking::NeedNewKeyFrame()
         c4=false;
 
 
-    std::cout << "want to insert," << (((c1a || c1b_without_lmidle || c1c) & c2) || c3 || c4)  << endl;
+    std::cout << "want to insert," << (((c1a || c1b_without_lmidle || c1c) & c2) || c3 || c4) << endl;
+    std::cout << "want to insert digging," << c1a << "," << c1b_without_lmidle << "," << c1c << "," << c2 << "," << c3 << "," << c4 << endl;
 
     // If Local Mapping is freezed by a Loop Closure do not insert keyframes
     if(mpLocalMapper->isStopped() || mpLocalMapper->stopRequested()) {
