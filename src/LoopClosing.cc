@@ -122,8 +122,6 @@ void LoopClosing::Run()
 #endif
             if(bFindedRegion)
             {
-                cout << "Sofiya,merge detected," << mbMergeDetected << endl;
-
                 if(mbMergeDetected)
                 {
 
@@ -176,6 +174,7 @@ void LoopClosing::Run()
                         //mpTracker->SetStepByStep(true);
 
                         Verbose::PrintMess("*Merge detected", Verbose::VERBOSITY_QUIET);
+                        std::cout << "Sofiya,Merge detected" << std::endl;
 
 #ifdef REGISTER_TIMES
                         std::chrono::steady_clock::time_point time_StartMerge = std::chrono::steady_clock::now();
@@ -233,6 +232,7 @@ void LoopClosing::Run()
                     vnPR_TypeRecogn.push_back(0);
 
                     Verbose::PrintMess("*Loop detected", Verbose::VERBOSITY_QUIET);
+                    std::cout << "Sofiya,Loop detected" << std::endl;
 
                     mg2oLoopScw = mg2oLoopSlw; //*mvg2oSim3LoopTcw[nCurrentIndex];
                     if(mpCurrentKF->GetMap()->IsInertial())
@@ -299,13 +299,15 @@ void LoopClosing::Run()
                 }
 
 
-                auto lc_end = std::chrono::high_resolution_clock::now();
-                auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(lc_end.time_since_epoch());
-                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(lc_end - lc_start);
-                std::string print = std::string("Sofiya,loop closing total,") + to_string(duration.count())  + ",ms,timestamp," + to_string(timestamp.count()) + "\n";
-                std::cout << print << endl;
             }
             mpLastCurrentKF = mpCurrentKF;
+
+            auto lc_end = std::chrono::high_resolution_clock::now();
+            auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(lc_end.time_since_epoch());
+            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(lc_end - lc_start);
+            std::string print = std::string("Sofiya,loop closing total,") + to_string(duration.count())  + ",ms,timestamp," + to_string(timestamp.count()) + "\n";
+            std::cout << print << endl;
+
 
         }
 
@@ -364,7 +366,6 @@ bool LoopClosing::NewDetectCommonRegions()
         // cout << "LoopClousure: Stereo KF inserted without check: " << mpCurrentKF->mnId << endl;
         mpKeyFrameDB->add(mpCurrentKF);
         mpCurrentKF->SetErase();
-        std::cout << "Sofiya,loop closure digging map size 5" << std::endl;
         return false;
     }
 
@@ -373,7 +374,6 @@ bool LoopClosing::NewDetectCommonRegions()
         // cout << "LoopClousure: Stereo KF inserted without check, map is small: " << mpCurrentKF->mnId << endl;
         mpKeyFrameDB->add(mpCurrentKF);
         mpCurrentKF->SetErase();
-        std::cout << "Sofiya,loop closure digging map size 12" << std::endl;
         return false;
     }
 
@@ -387,6 +387,7 @@ bool LoopClosing::NewDetectCommonRegions()
 #ifdef REGISTER_TIMES
     std::chrono::steady_clock::time_point time_StartEstSim3_1 = std::chrono::steady_clock::now();
 #endif
+    bool bCommonRegion = false;
     if(mnLoopNumCoincidences > 0)
     {
         bCheckSpatial = true;
@@ -396,7 +397,7 @@ bool LoopClosing::NewDetectCommonRegions()
         g2o::Sim3 gScw = gScl * mg2oLoopSlw;
         int numProjMatches = 0;
         vector<MapPoint*> vpMatchedMPs;
-        bool bCommonRegion = DetectAndReffineSim3FromLastKF(mpCurrentKF, mpLoopMatchedKF, gScw, numProjMatches, mvpLoopMPs, vpMatchedMPs);
+        bCommonRegion = DetectAndReffineSim3FromLastKF(mpCurrentKF, mpLoopMatchedKF, gScw, numProjMatches, mvpLoopMPs, vpMatchedMPs);
         if(bCommonRegion)
         {
 
@@ -435,8 +436,11 @@ bool LoopClosing::NewDetectCommonRegions()
         }
     }
 
+    std::cout << "Sofiya,loop closure digging loop meta," << bCommonRegion << "," << mnLoopNumCoincidences << std::endl;
+
     //Merge candidates
     bool bMergeDetectedInKF = false;
+    bCommonRegion = false;
     if(mnMergeNumCoincidences > 0)
     {
         // Find from the last KF candidates
@@ -446,7 +450,7 @@ bool LoopClosing::NewDetectCommonRegions()
         g2o::Sim3 gScw = gScl * mg2oMergeSlw;
         int numProjMatches = 0;
         vector<MapPoint*> vpMatchedMPs;
-        bool bCommonRegion = DetectAndReffineSim3FromLastKF(mpCurrentKF, mpMergeMatchedKF, gScw, numProjMatches, mvpMergeMPs, vpMatchedMPs);
+        bCommonRegion = DetectAndReffineSim3FromLastKF(mpCurrentKF, mpMergeMatchedKF, gScw, numProjMatches, mvpMergeMPs, vpMatchedMPs);
         if(bCommonRegion)
         {
             bMergeDetectedInKF = true;
@@ -478,6 +482,9 @@ bool LoopClosing::NewDetectCommonRegions()
 
         }
     }  
+
+    std::cout << "Sofiya,loop closure digging merge meta," << bCommonRegion << "," << mnMergeNumCoincidences << std::endl;
+
 #ifdef REGISTER_TIMES
         std::chrono::steady_clock::time_point time_EndEstSim3_1 = std::chrono::steady_clock::now();
 
@@ -620,6 +627,8 @@ bool LoopClosing::DetectCommonRegionsFromBoW(std::vector<KeyFrame*> &vpBowCand, 
     int numCandidates = vpBowCand.size();
     vector<int> vnStage(numCandidates, 0);
     vector<int> vnMatchesStage(numCandidates, 0);
+
+    std::cout << "Sofiya,loop closure digging DCR candidates," << numCandidates << std::endl;
 
     int index = 0;
     //Verbose::PrintMess("BoW candidates: There are " + to_string(vpBowCand.size()) + " possible candidates ", Verbose::VERBOSITY_DEBUG);
@@ -793,6 +802,7 @@ bool LoopClosing::DetectCommonRegionsFromBoW(std::vector<KeyFrame*> &vpBowCand, 
                         vector<MapPoint*> vpMatchedMP;
                         vpMatchedMP.resize(mpCurrentKF->GetMapPointMatches().size(), static_cast<MapPoint*>(NULL));
                         int numProjOptMatches = matcher.SearchByProjection(mpCurrentKF, mScw, vpMapPoints, vpMatchedMP, 5, 1.0);
+                        std::cout << "Sofiya,loop closure digging search by projection" << std::endl;
 
                         if(numProjOptMatches >= nProjOptMatches)
                         {
@@ -2287,8 +2297,8 @@ void LoopClosing::RunGlobalBundleAdjustment(Map* pActiveMap, unsigned long nLoop
 {  
     Verbose::PrintMess("Starting Global Bundle Adjustment", Verbose::VERBOSITY_NORMAL);
 
-#ifdef REGISTER_TIMES
     std::chrono::steady_clock::time_point time_StartFGBA = std::chrono::steady_clock::now();
+#ifdef REGISTER_TIMES
 
     nFGBA_exec += 1;
 
@@ -2511,16 +2521,18 @@ void LoopClosing::RunGlobalBundleAdjustment(Map* pActiveMap, unsigned long nLoop
 
             mpLocalMapper->Release();
 
-#ifdef REGISTER_TIMES
             std::chrono::steady_clock::time_point time_EndUpdateMap = std::chrono::steady_clock::now();
+            double timeFGBA = std::chrono::duration_cast<std::chrono::duration<double,std::milli> >(time_EndUpdateMap - time_StartFGBA).count();
+
+#ifdef REGISTER_TIMES
 
             double timeUpdateMap = std::chrono::duration_cast<std::chrono::duration<double,std::milli> >(time_EndUpdateMap - time_EndGBA).count();
             vdUpdateMap_ms.push_back(timeUpdateMap);
 
-            double timeFGBA = std::chrono::duration_cast<std::chrono::duration<double,std::milli> >(time_EndUpdateMap - time_StartFGBA).count();
             vdFGBATotal_ms.push_back(timeFGBA);
 #endif
             Verbose::PrintMess("Map updated!", Verbose::VERBOSITY_NORMAL);
+            std::cout << "Sofiya,GBA time," << timeFGBA << std::endl;
         }
 
         mbFinishedGBA = true;

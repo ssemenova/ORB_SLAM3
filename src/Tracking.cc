@@ -1972,6 +1972,7 @@ void Tracking::Track()
                     if ( mCurrentFrame.mnId<=(mnLastRelocFrameId+mnFramesToResetIMU) &&
                          (mSensor==System::IMU_MONOCULAR || mSensor==System::IMU_STEREO || mSensor == System::IMU_RGBD))
                     {
+                        std::cout << "Sofiya,local mapping digging state lost 1" << std::endl;
                         mState = LOST;
                     }
                     else if(pCurrentMap->KeyFramesInMap()>10)
@@ -1982,6 +1983,7 @@ void Tracking::Track()
                     }
                     else
                     {
+                        std::cout << "Sofiya,local mapping digging state lost 2" << std::endl;
                         mState = LOST;
                     }
                 }
@@ -2004,6 +2006,7 @@ void Tracking::Track()
                         if (mCurrentFrame.mTimeStamp-mTimeStampLost>time_recently_lost)
                         {
                             mState = LOST;
+                            std::cout << "Sofiya,local mapping digging state lost 3" << std::endl;
                             Verbose::PrintMess("Track Lost...", Verbose::VERBOSITY_NORMAL);
                             bOK=false;
                         }
@@ -2016,6 +2019,7 @@ void Tracking::Track()
                         //std::cout << "mTimeStampLost:" << to_string(mTimeStampLost) << std::endl;
                         if(mCurrentFrame.mTimeStamp-mTimeStampLost>3.0f && !bOK)
                         {
+                            std::cout << "Sofiya,local mapping digging state lost 4" << std::endl;
                             mState = LOST;
                             Verbose::PrintMess("Track Lost...", Verbose::VERBOSITY_NORMAL);
                             bOK=false;
@@ -2030,7 +2034,7 @@ void Tracking::Track()
                     if (pCurrentMap->KeyFramesInMap()<10)
                     {
                         mpSystem->ResetActiveMap();
-                        Verbose::PrintMess("Reseting current map...", Verbose::VERBOSITY_NORMAL);
+                        Verbose::PrintMess("Reseting current map in tracking", Verbose::VERBOSITY_NORMAL);
                     }else
                         CreateMapInAtlas();
 
