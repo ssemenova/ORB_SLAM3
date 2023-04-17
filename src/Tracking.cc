@@ -3193,8 +3193,9 @@ bool Tracking::NeedNewKeyFrame()
         c4=false;
 
 
-    std::cout << "want to insert," << (((c1a || c1b_without_lmidle || c1c) & c2) || c3 || c4) << endl;
+    std::cout << "want to insert," << (((c1a || c1b_without_lmidle || c1c) & c2) || c3 || c4) << "," << mCurrentFrame.mnId << endl;
     std::cout << "want to insert digging," << c1a << "," << c1b_without_lmidle << "," << c1c << "," << c2 << "," << c3 << "," << c4 << endl;
+    std::cout << "mnMatchesInliers," << mnMatchesInliers << "," << nRefMatches << "," << thRefRatio << "," << bNeedToInsertClose;
 
     // If Local Mapping is freezed by a Loop Closure do not insert keyframes
     if(mpLocalMapper->isStopped() || mpLocalMapper->stopRequested()) {
@@ -3361,7 +3362,7 @@ void Tracking::CreateNewKeyFrame()
     mpLastKeyFrame = pKF;
 
     auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
-    std::cout << "Sofiya,created keyframe," << timestamp.count() << endl;
+    std::cout << "Sofiya,created keyframe," << timestamp.count() << "," << mnLastKeyFrameId << endl;
 }
 
 void Tracking::SearchLocalPoints()
