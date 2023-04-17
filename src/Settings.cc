@@ -503,6 +503,17 @@ namespace ORB_SLAM3 {
                           R12, t12,
                           R_r1_u1,R_r2_u2,P1,P2,Q,
                           cv::CALIB_ZERO_DISPARITY,-1,newImSize_);
+        cout << "K1," << K1 << endl;
+        cout << "K2," << K2 << endl;
+        cout << "camera1DistortionCoef()," << camera1DistortionCoef() << endl;
+        cout << "camera2DistortionCoef()," << camera2DistortionCoef() << endl;
+        cout << "newImSize_," << newImSize_ << endl;
+        cout << "R12," << R12 << endl;
+        cout << "t12," << t12 << endl;
+        cout << "P1," << P1 << endl;
+        cout << "P2," << P2 << endl;
+        cout << "Q," << Q << endl;
+
         cv::initUndistortRectifyMap(K1, camera1DistortionCoef(), R_r1_u1, P1.rowRange(0, 3).colRange(0, 3),
                                     newImSize_, CV_32F, M1l_, M2l_);
         cv::initUndistortRectifyMap(K2, camera2DistortionCoef(), R_r2_u2, P2.rowRange(0, 3).colRange(0, 3),

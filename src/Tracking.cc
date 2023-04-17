@@ -3195,7 +3195,7 @@ bool Tracking::NeedNewKeyFrame()
 
     std::cout << "want to insert," << (((c1a || c1b_without_lmidle || c1c) & c2) || c3 || c4) << "," << mCurrentFrame.mnId << endl;
     std::cout << "want to insert digging," << c1a << "," << c1b_without_lmidle << "," << c1c << "," << c2 << "," << c3 << "," << c4 << endl;
-    std::cout << "mnMatchesInliers," << mnMatchesInliers << "," << nRefMatches << "," << thRefRatio << "," << bNeedToInsertClose;
+    std::cout << "mnMatchesInliers," << mnMatchesInliers << "," << nRefMatches << "," << thRefRatio << "," << bNeedToInsertClose << endl;
 
     // If Local Mapping is freezed by a Loop Closure do not insert keyframes
     if(mpLocalMapper->isStopped() || mpLocalMapper->stopRequested()) {
