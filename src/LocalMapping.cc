@@ -73,7 +73,7 @@ void LocalMapping::Run()
         // Check if there are keyframes in the queue
         if(CheckNewKeyFrames() && !mbBadImu)
         {
-        auto timer_start = std::chrono::high_resolution_clock::now();
+            auto T1 = std::chrono::high_resolution_clock::now();
 
 #ifdef REGISTER_TIMES
             double timeLBA_ms = 0;
@@ -83,6 +83,8 @@ void LocalMapping::Run()
 #endif
             // BoW conversion and insertion in Map
             ProcessNewKeyFrame();
+            auto T2 = std::chrono::high_resolution_clock::now();
+
 #ifdef REGISTER_TIMES
             std::chrono::steady_clock::time_point time_EndProcessKF = std::chrono::steady_clock::now();
 
@@ -92,6 +94,8 @@ void LocalMapping::Run()
 
             // Check recent MapPoints
             MapPointCulling();
+            auto T3 = std::chrono::high_resolution_clock::now();
+
 #ifdef REGISTER_TIMES
             std::chrono::steady_clock::time_point time_EndMPCulling = std::chrono::steady_clock::now();
 
@@ -101,14 +105,17 @@ void LocalMapping::Run()
 
             // Triangulate new MapPoints
             CreateNewMapPoints();
+            auto T4 = std::chrono::high_resolution_clock::now();
 
             mbAbortBA = false;
-
+            bool did_search_in_neighbors = false;
             if(!CheckNewKeyFrames())
             {
                 // Find more matches in neighbor keyframes and fuse point duplications
                 SearchInNeighbors();
+                did_search_in_neighbors = true;
             }
+            auto T5 = std::chrono::high_resolution_clock::now();
 
 #ifdef REGISTER_TIMES
             std::chrono::steady_clock::time_point time_EndMPCreation = std::chrono::steady_clock::now();
@@ -122,6 +129,13 @@ void LocalMapping::Run()
             int num_OptKF_BA = 0;
             int num_MPs_BA = 0;
             int num_edges_BA = 0;
+
+            auto T6 = std::chrono::high_resolution_clock::now();
+            auto T7 = std::chrono::high_resolution_clock::now();
+            auto T8 = std::chrono::high_resolution_clock::now();
+            auto T9 = std::chrono::high_resolution_clock::now();
+            bool did_local_inertial_ba = false;
+            bool did_lba = false;
 
             if(!CheckNewKeyFrames() && !stopRequested())
             {
@@ -150,14 +164,19 @@ void LocalMapping::Run()
                         bool bLarge = ((mpTracker->GetMatchesInliers()>75)&&mbMonocular)||((mpTracker->GetMatchesInliers()>100)&&!mbMonocular);
                         Optimizer::LocalInertialBA(mpCurrentKeyFrame, &mbAbortBA, mpCurrentKeyFrame->GetMap(),num_FixedKF_BA,num_OptKF_BA,num_MPs_BA,num_edges_BA, bLarge, !mpCurrentKeyFrame->GetMap()->GetIniertialBA2());
                         b_doneLBA = true;
+                        did_local_inertial_ba = true;
                     }
                     else
                     {
                         Optimizer::LocalBundleAdjustment(mpCurrentKeyFrame,&mbAbortBA, mpCurrentKeyFrame->GetMap(),num_FixedKF_BA,num_OptKF_BA,num_MPs_BA,num_edges_BA);
                         b_doneLBA = true;
+                        did_lba = true;
                     }
 
                 }
+
+                T6 = std::chrono::high_resolution_clock::now();
+
 #ifdef REGISTER_TIMES
                 std::chrono::steady_clock::time_point time_EndLBA = std::chrono::steady_clock::now();
 
@@ -188,9 +207,13 @@ void LocalMapping::Run()
                         InitializeIMU(1e2, 1e5, true);
                 }
 
+                T7 = std::chrono::high_resolution_clock::now();
+
 
                 // Check redundant local Keyframes
                 KeyFrameCulling();
+
+                T8 = std::chrono::high_resolution_clock::now();
 
 #ifdef REGISTER_TIMES
                 std::chrono::steady_clock::time_point time_EndKFCulling = std::chrono::steady_clock::now();
@@ -242,6 +265,7 @@ void LocalMapping::Run()
                         }
                     }
                 }
+                T9 = std::chrono::high_resolution_clock::now();
             }
 
 #ifdef REGISTER_TIMES
@@ -258,11 +282,34 @@ void LocalMapping::Run()
             vdLMTotal_ms.push_back(timeLocalMap);
 #endif
             auto timer_end = std::chrono::high_resolution_clock::now();
-            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(timer_end - timer_start);
+            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(timer_end - T1);
             auto tid = std::this_thread::get_id();
             if (duration.count() > 0) {
                 std::cout << "Sofiya,local mapping total," << duration.count() << endl;
+
+                auto process_new_kf = std::chrono::duration_cast<std::chrono::milliseconds>(T2 - T1).count();
+                auto mp_culling = std::chrono::duration_cast<std::chrono::milliseconds>(T3 - T2).count();
+                auto create_mps = std::chrono::duration_cast<std::chrono::milliseconds>(T4 - T3).count();
+                auto search_in_neighbors = std::chrono::duration_cast<std::chrono::milliseconds>(T5 - T4).count(); // did_search_in_neighbors
+                auto local_ba = std::chrono::duration_cast<std::chrono::milliseconds>(T6 - T5).count(); // did_local_inertial_ba, did_lba
+                auto initialize_imu = std::chrono::duration_cast<std::chrono::milliseconds>(T7 - T6).count();
+                auto kf_culling = std::chrono::duration_cast<std::chrono::milliseconds>(T8 - T7).count();
+                auto viba = std::chrono::duration_cast<std::chrono::milliseconds>(T9 - T8).count();
+
+                std::ostringstream oss;
+                oss << "Sofiya,local mapping specifics," << process_new_kf << "," <<  mp_culling << "," << create_mps << "," << search_in_neighbors << "," << did_search_in_neighbors << "," << local_ba << "," << did_local_inertial_ba << "," << did_lba << "," << initialize_imu << "," <<  kf_culling << "," <<  viba << "," << mpAtlas->MapPointsInMap() << "," << mpAtlas->KeyFramesInMap() << "," << mpAtlas->GetCurrentMap()->MapPointsInMap() << "," << mpAtlas->GetCurrentMap()->KeyFramesInMap();
+                std::cout << oss.str() <<  endl;
             }
+
+            // Save keyframe trajectory after local mapping
+            Sophus::SE3f Twc = mpCurrentKeyFrame->GetPoseInverse();
+            Eigen::Quaternionf q = Twc.unit_quaternion();
+            Eigen::Vector3f t = Twc.translation();
+            std::ostringstream oss;
+            oss << "SOFIYA,LOCALMAPPINGTRAJECTORY," << setprecision(6) << mpCurrentKeyFrame->mTimeStamp << setprecision(7) << " " << t(0) << " " << t(1) << " " << t(2)
+            << " " << q.x() << " " << q.y() << " " << q.z() << " " << q.w() << endl;
+            cout << oss.str() << endl;
+
         }
         else if(Stop() && !mbBadImu)
         {
