@@ -210,8 +210,11 @@ void LocalMapping::Run()
                 T7 = std::chrono::high_resolution_clock::now();
 
 
+                // PrintMap("/home/sofiya/char/ORB_SLAM3/connectivity_all.txt", false);
                 // Check redundant local Keyframes
                 KeyFrameCulling();
+                // PrintMap("/home/sofiya/char/ORB_SLAM3/connectivity_all.txt", false);
+                // PrintMap("/home/sofiya/char/ORB_SLAM3/connectivity.txt", true);
 
                 T8 = std::chrono::high_resolution_clock::now();
 
@@ -306,7 +309,7 @@ void LocalMapping::Run()
             Eigen::Quaternionf q = Twc.unit_quaternion();
             Eigen::Vector3f t = Twc.translation();
             std::ostringstream oss;
-            oss << "SOFIYA,LOCALMAPPINGTRAJECTORY," << setprecision(6) << mpCurrentKeyFrame->mTimeStamp << setprecision(7) << " " << t(0) << " " << t(1) << " " << t(2)
+            oss << "SOFIYA,LOCALMAPPINGTRAJECTORY," << fixed << mpCurrentKeyFrame->mTimeStamp << setprecision(7) << " " << t(0) << " " << t(1) << " " << t(2)
             << " " << q.x() << " " << q.y() << " " << q.z() << " " << q.w() << endl;
             cout << oss.str() << endl;
 
@@ -335,6 +338,31 @@ void LocalMapping::Run()
     }
 
     SetFinish();
+}
+
+void LocalMapping::PrintMap(string filename, bool trunc) {
+    // Sofiya.. connectivity graphs. Comment out calls when running normally
+    std::ofstream cout_stream;
+    if (trunc) {
+        cout_stream.open(filename, std::ofstream::trunc);
+    } else {
+        cout_stream.open(filename, std::ofstream::app);
+    }
+    auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+    cout_stream << "Sofiya,New KF ID," << mpCurrentKeyFrame->mnId << ",timestamp," << timestamp.count() << endl;
+
+    auto allKFs = mpAtlas->GetCurrentMap()->GetAllKeyFrames();
+    for (auto mit=allKFs.begin(), mend=allKFs.end(); mit != mend; mit++){
+        KeyFrame * currKF = *mit;
+        cout_stream << currKF->mnId << ",";
+        auto connectedKFs = currKF->GetVectorCovisibleKeyFrames();
+
+        for(auto nit=connectedKFs.begin(), nend=connectedKFs.end(); nit != nend; nit++) {
+            cout_stream << (*nit)->mnId << " ";
+        }
+        cout_stream << endl;
+    }
+    cout_stream << endl;
 }
 
 void LocalMapping::InsertKeyFrame(KeyFrame *pKF)
@@ -1085,6 +1113,7 @@ void LocalMapping::KeyFrameCulling()
                         pKF->mNextKF = NULL;
                         pKF->mPrevKF = NULL;
                         pKF->SetBadFlag();
+                        cout << "Sofiya,keyframe culling,1," << pKF->mnId << endl;
                     }
                     else if(!mpCurrentKeyFrame->GetMap()->GetIniertialBA2() && ((pKF->GetImuPosition()-pKF->mPrevKF->GetImuPosition()).norm()<0.02) && (t<3))
                     {
@@ -1094,12 +1123,14 @@ void LocalMapping::KeyFrameCulling()
                         pKF->mNextKF = NULL;
                         pKF->mPrevKF = NULL;
                         pKF->SetBadFlag();
+                        cout << "Sofiya,keyframe culling,2," << pKF->mnId << endl;
                     }
                 }
             }
             else
             {
                 pKF->SetBadFlag();
+                cout << "Sofiya,keyframe culling,3," << pKF->mnId << endl;
             }
         }
         if((count > 20 && mbAbortBA) || count>100)

@@ -51,6 +51,8 @@ public:
     // Main function
     void Run();
 
+    void PrintMap(string filename, bool trunc);
+
     void InsertKeyFrame(KeyFrame* pKF);
     void EmptyQueue();
 
