@@ -63,6 +63,8 @@ public:
 
     ~Tracking();
 
+    std::ofstream jacob_stream;
+
     // Parse the config file
     bool ParseCamParamFile(cv::FileStorage &fSettings);
     bool ParseORBParamFile(cv::FileStorage &fSettings);

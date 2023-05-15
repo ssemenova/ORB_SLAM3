@@ -515,6 +515,7 @@ void LocalMapping::CreateNewMapPoints()
     int countStereoAttempt = 0;
     int totalStereoPts = 0;
     // Search matches with epipolar restriction and triangulate
+    int new_mappoints = 0;
     for(size_t i=0; i<vpNeighKFs.size(); i++)
     {
         if(i>0 && CheckNewKeyFrames())
@@ -776,6 +777,7 @@ void LocalMapping::CreateNewMapPoints()
 
             // Triangulation is succesfull
             MapPoint* pMP = new MapPoint(x3D, mpCurrentKeyFrame, mpAtlas->GetCurrentMap());
+            new_mappoints++;
             if (bPointStereo)
                 countStereo++;
             
@@ -793,6 +795,10 @@ void LocalMapping::CreateNewMapPoints()
             mlpRecentAddedMapPoints.push_back(pMP);
         }
     }    
+
+    std::ofstream jacob_stream;
+    jacob_stream.open("/home/sofiya/char/ORB_SLAM3/localmapping.txt", std::ofstream::app); // TODO JACOB change filename
+    jacob_stream << "CreateNewMapPoints," << mpCurrentKeyFrame->mnId << "," << new_mappoints << std::endl;
 }
 
 void LocalMapping::SearchInNeighbors()

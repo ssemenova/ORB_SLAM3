@@ -48,6 +48,8 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer,
     mpFrameDrawer(pFrameDrawer), mpMapDrawer(pMapDrawer), mpAtlas(pAtlas), mnLastRelocFrameId(0), time_recently_lost(5.0),
     mnInitialFrameId(0), mbCreatedMap(false), mnFirstFrameId(0), mpCamera2(nullptr), mpLastKeyFrame(static_cast<KeyFrame*>(NULL))
 {
+    jacob_stream.open("/home/sofiya/char/ORB_SLAM3/tracking.txt", std::ofstream::app); // TODO JACOB change filename
+
     // Load camera parameters from settings file
     if(settings){
         newParameterLoader(settings);
@@ -1492,6 +1494,7 @@ Sophus::SE3f Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat 
 
     auto trackstart = std::chrono::high_resolution_clock::now();
 
+    // TODO JACOB ORB EXTRACTION step 1
     if (mSensor == System::STEREO && !mpCamera2)
         mCurrentFrame = Frame(mImGray,imGrayRight,timestamp,mpORBextractorLeft,mpORBextractorRight,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth,mpCamera);
     else if(mSensor == System::STEREO && mpCamera2)
@@ -1805,6 +1808,7 @@ void Tracking::ResetFrameIMU()
 void Tracking::Track()
 {
 
+    jacob_stream << "========" << std::endl;
     if (bStepByStep)
     {
         std::cout << "Tracking: Waiting to the next step" << std::endl;
@@ -2257,6 +2261,7 @@ void Tracking::Track()
             std::chrono::steady_clock::time_point time_StartNewKF = std::chrono::steady_clock::now();
 #endif
             bool bNeedKF = NeedNewKeyFrame();
+            jacob_stream << "NeedNewKeyFrame 2," << bNeedKF << endl;
 
             // Check if we need to insert a new keyframe
             // if(bNeedKF && bOK)
@@ -2787,6 +2792,8 @@ bool Tracking::TrackReferenceKeyFrame()
         }
     }
 
+    jacob_stream << "TrackReferenceKeyFrame, " << nmatches << "," << nmatchesMap << endl;
+
     if (mSensor == System::IMU_MONOCULAR || mSensor == System::IMU_STEREO || mSensor == System::IMU_RGBD)
         return true;
     else
@@ -2900,6 +2907,8 @@ bool Tracking::TrackWithMotionModel()
 
     int nmatches = matcher.SearchByProjection(mCurrentFrame,mLastFrame,th,mSensor==System::MONOCULAR || mSensor==System::IMU_MONOCULAR);
 
+    int first_matches = nmatches;
+    int second_matches = 0;
     // If few matches, uses a wider window search
     if(nmatches<20)
     {
@@ -2907,9 +2916,12 @@ bool Tracking::TrackWithMotionModel()
         fill(mCurrentFrame.mvpMapPoints.begin(),mCurrentFrame.mvpMapPoints.end(),static_cast<MapPoint*>(NULL));
 
         nmatches = matcher.SearchByProjection(mCurrentFrame,mLastFrame,2*th,mSensor==System::MONOCULAR || mSensor==System::IMU_MONOCULAR);
+        second_matches = nmatches;
         Verbose::PrintMess("Matches with wider search: " + to_string(nmatches), Verbose::VERBOSITY_NORMAL);
 
     }
+
+    jacob_stream << "TrackWithMotionModel," << first_matches << "," << second_matches << endl;
 
     if(nmatches<20)
     {
@@ -3197,6 +3209,8 @@ bool Tracking::NeedNewKeyFrame()
     std::cout << "want to insert digging," << c1a << "," << c1b_without_lmidle << "," << c1c << "," << c2 << "," << c3 << "," << c4 << endl;
     std::cout << "mnMatchesInliers," << mnMatchesInliers << "," << nRefMatches << "," << thRefRatio << "," << bNeedToInsertClose << endl;
 
+    jacob_stream << "NeedNewKeyFrame 1," << (((c1a||c1b||c1c) && c2)||c3 ||c4) << "," << c1a << "," << c1b << "," << c1c << "," << c2 << "," << c3 << "," << c4 << std::endl;
+
     // If Local Mapping is freezed by a Loop Closure do not insert keyframes
     if(mpLocalMapper->isStopped() || mpLocalMapper->stopRequested()) {
         /*if(mSensor == System::MONOCULAR)
@@ -3363,6 +3377,7 @@ void Tracking::CreateNewKeyFrame()
 
     auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
     std::cout << "Sofiya,created keyframe," << timestamp.count() << "," << mnLastKeyFrameId << endl;
+    jacob_stream << "CreateNewKeyFrame," << pKF->mnId << endl;
 }
 
 void Tracking::SearchLocalPoints()
@@ -3410,6 +3425,7 @@ void Tracking::SearchLocalPoints()
         }
     }
 
+    int matches = 0;
     if(nToMatch>0)
     {
         ORBmatcher matcher(0.8);
@@ -3435,8 +3451,10 @@ void Tracking::SearchLocalPoints()
         if(mState==LOST || mState==RECENTLY_LOST) // Lost for less than 1 second
             th=15; // 15
 
-        int matches = matcher.SearchByProjection(mCurrentFrame, mvpLocalMapPoints, th, mpLocalMapper->mbFarPoints, mpLocalMapper->mThFarPoints);
+        matches = matcher.SearchByProjection(mCurrentFrame, mvpLocalMapPoints, th, mpLocalMapper->mbFarPoints, mpLocalMapper->mThFarPoints);
     }
+
+    jacob_stream << "SearchLocalPoints," << nToMatch << "," << matches << std::endl;
 }
 
 void Tracking::UpdateLocalMap()
