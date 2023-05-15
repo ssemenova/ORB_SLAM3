@@ -1737,13 +1737,34 @@ void Tracking::PreintegrateIMU()
             cout << "mpImuPreintegratedFromLastKF does not exist" << endl;
         mpImuPreintegratedFromLastKF->IntegrateNewMeasurement(acc,angVel,tstep);
         pImuPreintegratedFromLastFrame->IntegrateNewMeasurement(acc,angVel,tstep);
+        //std::cout(acc[0]);
     }
+    pImuPreintegratedFromLastFrame->printMeasurements();
 
     mCurrentFrame.mpImuPreintegratedFrame = pImuPreintegratedFromLastFrame;
     mCurrentFrame.mpImuPreintegrated = mpImuPreintegratedFromLastKF;
     mCurrentFrame.mpLastKeyFrame = mpLastKeyFrame;
 
     mCurrentFrame.setIntegrated();
+
+    //jacob added
+    const Eigen::Vector3f twb1 = mLastFrame.GetImuPosition();
+    const Eigen::Matrix3f Rwb1 = mLastFrame.GetImuRotation();
+    const Eigen::Vector3f Vwb1 = mLastFrame.GetVelocity();
+    const Eigen::Vector3f Gz(0, 0, -IMU::GRAVITY_VALUE);
+    const float t12 = mCurrentFrame.mpImuPreintegratedFrame->dT;
+
+    Eigen::Matrix3f Rwb2 = IMU::NormalizeRotation(Rwb1 * mCurrentFrame.mpImuPreintegratedFrame->GetDeltaRotation(mLastFrame.mImuBias));
+    Eigen::Vector3f twb2 = twb1 + Vwb1*t12 + 0.5f*t12*t12*Gz+ Rwb1 * mCurrentFrame.mpImuPreintegratedFrame->GetDeltaPosition(mLastFrame.mImuBias);
+    Eigen::Vector3f Vwb2 = Vwb1 + t12*Gz + Rwb1 * mCurrentFrame.mpImuPreintegratedFrame->GetDeltaVelocity(mLastFrame.mImuBias);
+
+    cout << "Rwb2:" << endl;
+    cout << Rwb2 << endl;
+    cout << "twb2:" << endl;
+    cout << twb2 << endl;
+    cout << "Vwb2:" << endl;
+    cout << Vwb2 << endl;
+    //end jacob added
 
     //Verbose::PrintMess("Preintegration is finished!! ", Verbose::VERBOSITY_DEBUG);
 }
@@ -1783,6 +1804,8 @@ bool Tracking::PredictStateIMU()
         const Eigen::Vector3f Gz(0, 0, -IMU::GRAVITY_VALUE);
         const float t12 = mCurrentFrame.mpImuPreintegratedFrame->dT;
 
+
+        //TODO Jacob pull this code into preintegration step and print it out
         Eigen::Matrix3f Rwb2 = IMU::NormalizeRotation(Rwb1 * mCurrentFrame.mpImuPreintegratedFrame->GetDeltaRotation(mLastFrame.mImuBias));
         Eigen::Vector3f twb2 = twb1 + Vwb1*t12 + 0.5f*t12*t12*Gz+ Rwb1 * mCurrentFrame.mpImuPreintegratedFrame->GetDeltaPosition(mLastFrame.mImuBias);
         Eigen::Vector3f Vwb2 = Vwb1 + t12*Gz + Rwb1 * mCurrentFrame.mpImuPreintegratedFrame->GetDeltaVelocity(mLastFrame.mImuBias);
