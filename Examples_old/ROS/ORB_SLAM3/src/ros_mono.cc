@@ -59,7 +59,7 @@ int main(int argc, char **argv)
     ImageGrabber igb(&SLAM);
 
     ros::NodeHandle nodeHandler;
-    ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &ImageGrabber::GrabImage,&igb);
+    ros::Subscriber sub = nodeHandler.subscribe("/cam0/image_raw", 1, &ImageGrabber::GrabImage,&igb);
 
     ros::spin();
 
@@ -67,7 +67,11 @@ int main(int argc, char **argv)
     SLAM.Shutdown();
 
     // Save camera trajectory
-    SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory.txt");
+    SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory_TUM_Format.txt");
+    SLAM.SaveTrajectoryTUM("FrameTrajectory_TUM_Format.txt");
+    SLAM.SaveTrajectoryKITTI("FrameTrajectory_KITTI_Format.txt");
+    SLAM.SaveTrajectoryEuRoC("CameraTrajectory.txt");
+    SLAM.SaveKeyFrameTrajectoryEuRoC("KeyFrameTrajectory.txt");
 
     ros::shutdown();
 

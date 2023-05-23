@@ -1,7 +1,7 @@
 import shlex, subprocess, time, os, signal
 
 device_name = "laptop"
-output_dir = '/home/sofiya/char/results'
+output_dir = '/home/sofiya/char/orbslam3_types'
 datasets_dir = '/media/sofiya/Samsung_T5/'
 
 prepend = "" # Optional prepend to results folder
@@ -11,33 +11,36 @@ systems = [
     #['openvins', '/home/sofiya/char/catkin_ws_ov']
 ]
 datasets = [
-    #   ['euroc', ['V2_02_medium']]
-    ['euroc', ['MH_01_easy', 'MH_02_easy', 'MH_03_medium', 'MH_04_difficult', 'MH_05_difficult', 'V1_01_easy', 'V1_02_medium', 'V1_03_difficult', 'V2_01_easy', 'V2_02_medium', 'V2_03_difficult']]
+    ['euroc', ['V2_02_medium']]
+    #['euroc', ['MH_01_easy', 'MH_02_easy', 'MH_03_medium', 'MH_04_difficult', 'MH_05_difficult', 'V1_01_easy', 'V1_02_medium', 'V1_03_difficult', 'V2_01_easy', 'V2_02_medium', 'V2_03_difficult']]
     # ['hilti', ['exp06_construction_upper_level_3', 'exp16_attic_to_upper_gallery_2', 'exp10_cupola_2', 'exp18_corridor_lower_gallery_2', 'exp14_basement_2']]
 ]
-frame_rates = [0.025]
+frame_rates = [1, .5, .75, .25]
 multiple_repeat = 1
+orbslam_types = ["Stereo_Inertial", "Stereo", "Mono", "Mono_Inertial"]
 
-def run(slam_msckf_features_optional=""):
+# To loop through these, go down to the for loop at the bottom
+slam_msckf_features = "max_slam:=50 max_slam_in_update:=25 max_msckf_in_update:=40"
+
+def run(slam_msckf_features="", orbslam_type="Stereo_Inertial", prepend=""):
     for (dataset_name, all_seqs) in datasets:
-        if "euroc" in dataset_name:
-            base_frame_rate = 1
-            reroute_topics = ""
-            # ORBSLAM
-            orbslam_type = "Stereo_Inertial"
+        base_frame_rate = 1
+        reroute_topics = ""
+
+        if orbslam_type == "Stereo_Inertial":
             orbslam_calib_file_location = "Stereo-Inertial/EuRoC.yaml"
-        elif "hilti" in dataset_name:
-            base_frame_rate = 0.25
-            reroute_topics = "/alphasense/cam0/image_raw:=/cam0/image_raw /alphasense/imu:=/imu0"
-            # ORBSLAM
-            orbslam_type = "Mono_Inertial"
-            orbslam_calib_file_location = "Monocular-Inertial/hilti_mono"
+        elif orbslam_type == "Mono_Inertial":
+            orbslam_calib_file_location = "Monocular-Inertial/EuRoC.yaml"
+        elif orbslam_type == "Stereo":
+            orbslam_calib_file_location = "Stereo/EuRoC.yaml"
+        elif orbslam_type == "Mono":
+            orbslam_calib_file_location = "Monocular/EuRoC.yaml"
+        else:
+            print("Unknown ORBSLAM type!")
+            return
 
         for seq_name in all_seqs:
-            if "euroc" in dataset_name:
-                short_seq_name = "".join(seq_name.split("_")[:2])
-            elif "hilti" in dataset_name:
-                short_seq_name = seq_name.split("_")[0]
+            short_seq_name = "".join(seq_name.split("_")[:2])
 
             for (system_name, system_dir) in systems:
                 for frame_rate in frame_rates:
@@ -63,7 +66,7 @@ def run(slam_msckf_features_optional=""):
                             save_cmd = 'mv {}/results/output_frontend_stats.csv {}/results/traj_vio.csv {}/results/traj_pgo.csv output.txt connectivity.dot connectivity_acceptable_factors.txt connectivity_lcd_factors.txt connectivity_rpgo.dot {}'.format(system_dir, system_dir, system_dir, final_results_dir)
                         elif system_name == "openvins":
                             parallel = "4threads"
-                            system_cmd = "roslaunch ov_msckf subscribe.launch config:={}_mav dosave:=true path_est:={}/results/trajectory.txt dotime:=true path_time:={}/results/time_provided.txt {}".format(dataset_name, system_dir, system_dir, slam_msckf_features_optional)
+                            system_cmd = "roslaunch ov_msckf subscribe.launch config:={}_mav dosave:=true path_est:={}/results/trajectory.txt dotime:=true path_time:={}/results/time_provided.txt {}".format(dataset_name, system_dir, system_dir, slam_msckf_features)
                             save_cmd = 'mv {}/results/trajectory.txt {}/results/time_provided.txt output.txt {}'.format(system_dir, system_dir, final_results_dir)
 
                         print("PLAYING... {} {} fps multiplier={}".format(system_name, short_seq_name, frame_rate))
@@ -93,8 +96,10 @@ def run(slam_msckf_features_optional=""):
 
 
 
-slam_msckf_features_optional = "max_slam:=50 max_slam_in_update:=25 max_msckf_in_update:=40"
-run(slam_msckf_features_optional)
+for orbslam_type in orbslam_types:
+    print("!!!!!!!!!!!!!!!!!!!!!!!!", orbslam_type)
+    run(slam_msckf_features, orbslam_type, "[{}]".format(orbslam_type))
+
 # Below code is to run the msckf vs. slam features experiments for openvins
 # for max_slam in range(0, 101, 25):
 #     l = [int(max_slam/2), max_slam] if max_slam > 0 else [0]
@@ -102,8 +107,8 @@ run(slam_msckf_features_optional)
 #         for max_msckf_in_update in range(0, 101, 25):
 #             if max_slam == 0 and max_msckf_in_update == 0:
 #                 continue
-#             slam_msckf_features_optional = "max_slam:={} max_slam_in_update:={} max_msckf_in_update:={}".format(max_slam, max_slam_in_update, max_msckf_in_update)
+#             slam_msckf_features = "max_slam:={} max_slam_in_update:={} max_msckf_in_update:={}".format(max_slam, max_slam_in_update, max_msckf_in_update)
 #             print(max_slam, max_slam_in_update, max_msckf_in_update)
 #             prepend = "{}_{}_{}_".format(max_slam, max_slam_in_update, max_msckf_in_update)
 
-#             run(slam_msckf_features_optional)
+#             run(slam_msckf_features)
