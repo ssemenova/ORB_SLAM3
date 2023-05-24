@@ -1,7 +1,7 @@
 import shlex, subprocess, time, os, signal
 
 device_name = "laptop"
-output_dir = '/home/sofiya/char/orbslam3_types'
+output_dir = '/home/sofiya/char/orbslam_types'
 datasets_dir = '/media/sofiya/Samsung_T5/'
 
 prepend = "" # Optional prepend to results folder
@@ -17,7 +17,10 @@ datasets = [
 ]
 frame_rates = [1, .5, .75, .25]
 multiple_repeat = 1
-orbslam_types = ["Stereo_Inertial", "Stereo", "Mono", "Mono_Inertial"]
+orbslam_types = [
+    #"Stereo_Inertial", "Stereo", "Mono", "Mono_Inertial"
+    "Mono"
+]
 
 # To loop through these, go down to the for loop at the bottom
 slam_msckf_features = "max_slam:=50 max_slam_in_update:=25 max_msckf_in_update:=40"
@@ -29,12 +32,16 @@ def run(slam_msckf_features="", orbslam_type="Stereo_Inertial", prepend=""):
 
         if orbslam_type == "Stereo_Inertial":
             orbslam_calib_file_location = "Stereo-Inertial/EuRoC.yaml"
+            do_rectify = "false"
         elif orbslam_type == "Mono_Inertial":
             orbslam_calib_file_location = "Monocular-Inertial/EuRoC.yaml"
+            do_rectify = ""
         elif orbslam_type == "Stereo":
             orbslam_calib_file_location = "Stereo/EuRoC.yaml"
+            do_rectify = "false"
         elif orbslam_type == "Mono":
             orbslam_calib_file_location = "Monocular/EuRoC.yaml"
+            do_rectify = ""
         else:
             print("Unknown ORBSLAM type!")
             return
@@ -57,7 +64,7 @@ def run(slam_msckf_features="", orbslam_type="Stereo_Inertial", prepend=""):
 
                         if system_name == "orbslam3":
                             parallel = "normal"
-                            system_cmd = 'rosrun ORB_SLAM3 {} {}/Vocabulary/ORBvoc.txt {}/Examples/{} false'.format(orbslam_type, system_dir, system_dir, orbslam_calib_file_location)
+                            system_cmd = 'rosrun ORB_SLAM3 {} {}/Vocabulary/ORBvoc.txt {}/Examples/{} {}'.format(orbslam_type, system_dir, system_dir, orbslam_calib_file_location, do_rectify)
                             save_cmd = 'mv KeyFrameTrajectory_TUM_Format.txt FrameTrajectory_KITTI_Format.txt FrameTrajectory_TUM_Format.txt CameraTrajectory.txt KeyFrameTrajectory.txt output.txt {}'.format(final_results_dir)
                             #connectivity.txt connectivity_all.txt 
                         elif system_name == "kimera":

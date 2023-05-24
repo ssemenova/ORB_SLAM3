@@ -1592,6 +1592,8 @@ Sophus::SE3f Tracking::GrabImageMonocular(const cv::Mat &im, const double &times
             cvtColor(mImGray,mImGray,cv::COLOR_BGRA2GRAY);
     }
 
+    auto trackstart = std::chrono::high_resolution_clock::now();
+
     if (mSensor == System::MONOCULAR)
     {
         if(mState==NOT_INITIALIZED || mState==NO_IMAGES_YET ||(lastID - initID) < mMaxFrames)
@@ -1615,12 +1617,23 @@ Sophus::SE3f Tracking::GrabImageMonocular(const cv::Mat &im, const double &times
     mCurrentFrame.mNameFile = filename;
     mCurrentFrame.mnDataset = mnNumDataset;
 
+    auto extractionend = std::chrono::high_resolution_clock::now();
+
 #ifdef REGISTER_TIMES
     vdORBExtract_ms.push_back(mCurrentFrame.mTimeORB_Ext);
 #endif
 
     lastID = mCurrentFrame.mnId;
+
     Track();
+
+    auto trackend = std::chrono::high_resolution_clock::now();
+    auto end_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(trackend.time_since_epoch());
+    auto totald = std::chrono::duration_cast<std::chrono::milliseconds>(trackend - trackstart);
+    auto extractiond = std::chrono::duration_cast<std::chrono::milliseconds>(extractionend - trackstart);
+    auto trackd = std::chrono::duration_cast<std::chrono::milliseconds>(trackend - extractionend);
+    std::string print = std::string("Sofiya,tracking total,") + to_string(totald.count()) + ",extraction only," + to_string(extractiond.count()) + ",tracking only," + to_string(trackd.count())  + ",timestamp," + to_string(end_timestamp.count()) + "\n";
+    std::cout << print << std::endl;
 
     return mCurrentFrame.GetPose();
 }
