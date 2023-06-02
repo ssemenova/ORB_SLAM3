@@ -1,21 +1,21 @@
 import shlex, subprocess, time, os, signal
 
 device_name = "laptop"
-output_dir = '/home/sofiya/char/orbslam_types'
+output_dir = '/home/sofiya/char/bla'
 datasets_dir = '/media/sofiya/Samsung_T5/'
 
-prepend = "" # Optional prepend to results folder
+prepend = "laptopconcurrency" # Optional prepend to results folder
 systems = [
     ['orbslam3', '/home/sofiya/char/ORB_SLAM3'],
     #['kimera', '/home/sofiya/char/kimera_workspace'],
     #['openvins', '/home/sofiya/char/catkin_ws_ov']
 ]
 datasets = [
-    ['euroc', ['V2_02_medium']]
+    ['euroc', ['V1_01_easy']]
     #['euroc', ['MH_01_easy', 'MH_02_easy', 'MH_03_medium', 'MH_04_difficult', 'MH_05_difficult', 'V1_01_easy', 'V1_02_medium', 'V1_03_difficult', 'V2_01_easy', 'V2_02_medium', 'V2_03_difficult']]
     # ['hilti', ['exp06_construction_upper_level_3', 'exp16_attic_to_upper_gallery_2', 'exp10_cupola_2', 'exp18_corridor_lower_gallery_2', 'exp14_basement_2']]
 ]
-frame_rates = [1, .5, .75, .25]
+frame_rates = [1, 0.75, 0.5, 0.25]
 multiple_repeat = 1
 orbslam_types = [
     #"Stereo_Inertial", "Stereo", "Mono", "Mono_Inertial"
@@ -51,10 +51,7 @@ def run(slam_msckf_features="", orbslam_type="Stereo_Inertial", prepend=""):
 
             for (system_name, system_dir) in systems:
                 for frame_rate in frame_rates:
-                    if frame_rate == 1:
-                        repeat = multiple_repeat
-                    else:
-                        repeat = 1
+                    repeat = multiple_repeat
 
                     for i in range(0,repeat):
                         final_results_dir = os.path.join(
@@ -65,22 +62,26 @@ def run(slam_msckf_features="", orbslam_type="Stereo_Inertial", prepend=""):
                         if system_name == "orbslam3":
                             parallel = "normal"
                             system_cmd = 'rosrun ORB_SLAM3 {} {}/Vocabulary/ORBvoc.txt {}/Examples/{} {}'.format(orbslam_type, system_dir, system_dir, orbslam_calib_file_location, do_rectify)
-                            save_cmd = 'mv KeyFrameTrajectory_TUM_Format.txt FrameTrajectory_KITTI_Format.txt FrameTrajectory_TUM_Format.txt CameraTrajectory.txt KeyFrameTrajectory.txt output.txt {}'.format(final_results_dir)
+                            save_cmd = 'mv KeyFrameTrajectory_TUM_Format.txt FrameTrajectory_KITTI_Format.txt FrameTrajectory_TUM_Format.txt CameraTrajectory.txt KeyFrameTrajectory.txt output.txt cpumem.txt {}'.format(final_results_dir)
                             #connectivity.txt connectivity_all.txt 
                         elif system_name == "kimera":
                             parallel = "parallel"
                             system_cmd = 'roslaunch kimera_vio_ros kimera_vio_ros_{}.launch log_output_path:={}/results'.format(dataset_name, system_dir)
-                            save_cmd = 'mv {}/results/output_frontend_stats.csv {}/results/traj_vio.csv {}/results/traj_pgo.csv output.txt connectivity.dot connectivity_acceptable_factors.txt connectivity_lcd_factors.txt connectivity_rpgo.dot {}'.format(system_dir, system_dir, system_dir, final_results_dir)
+                            save_cmd = 'mv {}/results/output_frontend_stats.csv {}/results/traj_vio.csv {}/results/traj_pgo.csv output.txt connectivity.dot connectivity_acceptable_factors.txt connectivity_lcd_factors.txt connectivity_rpgo.dot cpumem.txt {}'.format(system_dir, system_dir, system_dir, final_results_dir)
                         elif system_name == "openvins":
                             parallel = "4threads"
                             system_cmd = "roslaunch ov_msckf subscribe.launch config:={}_mav dosave:=true path_est:={}/results/trajectory.txt dotime:=true path_time:={}/results/time_provided.txt {}".format(dataset_name, system_dir, system_dir, slam_msckf_features)
-                            save_cmd = 'mv {}/results/trajectory.txt {}/results/time_provided.txt output.txt {}'.format(system_dir, system_dir, final_results_dir)
+                            save_cmd = 'mv {}/results/trajectory.txt {}/results/time_provided.txt output.txt cpumem.txt {}'.format(system_dir, system_dir, final_results_dir)
 
                         print("PLAYING... {} {} fps multiplier={}".format(system_name, short_seq_name, frame_rate))
                         # Run system... nonblocking
                         f = open("output.txt", "w")
                         system_proc = subprocess.Popen(shlex.split(system_cmd), stdout=f, stderr=f)
                         time.sleep(10) # Sleep to give system time to load vocabulary
+
+                        # Measure CPU and memory ... nonblocking
+                        f2 = open("cpumem.txt", "w")
+                        cpumem_proc = subprocess.Popen(shlex.split("./cpumem.sh"), stdout=f2, stderr=f2)
 
                         # Run rosbag ... blocking
                         full_bag_path = os.path.join(datasets_dir, dataset_name, seq_name + ".bag")
@@ -91,8 +92,10 @@ def run(slam_msckf_features="", orbslam_type="Stereo_Inertial", prepend=""):
 
                         # Kill system after rosbag is done
                         system_proc.send_signal(signal.SIGINT)
+                        cpumem_proc.send_signal(signal.SIGKILL)
                         time.sleep(5) # Give some time to shut down
                         outs, errs = system_proc.communicate()
+                        outs, errs = cpumem_proc.communicate()
 
                         # Move results to the right directory
                         subprocess.run(shlex.split('mkdir {}'.format(final_results_dir))) # Make directory 
@@ -102,10 +105,9 @@ def run(slam_msckf_features="", orbslam_type="Stereo_Inertial", prepend=""):
                         print("====================")
 
 
-
 for orbslam_type in orbslam_types:
     print("!!!!!!!!!!!!!!!!!!!!!!!!", orbslam_type)
-    run(slam_msckf_features, orbslam_type, "[{}]".format(orbslam_type))
+    run(slam_msckf_features, orbslam_type, "{}_[{}]".format(prepend, orbslam_type))
 
 # Below code is to run the msckf vs. slam features experiments for openvins
 # for max_slam in range(0, 101, 25):
