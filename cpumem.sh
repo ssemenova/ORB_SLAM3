@@ -4,7 +4,7 @@
 while :
 do 
     # Get the current usage of CPU and memory
-    cpuUsage=$(top -bn1 | awk '/Cpu/ { print $2}')
+    cpuUsage=$(top -bn2 | grep 'Cpu' | sed -n '2p' | awk '{print $2}')
     memUsage=$(free -m | awk '/Mem/{print $3}')
 
     # Print the usage

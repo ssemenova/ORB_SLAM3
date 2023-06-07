@@ -1,10 +1,10 @@
 import shlex, subprocess, time, os, signal
 
 device_name = "laptop"
-output_dir = '/home/sofiya/char/bla'
+output_dir = '/home/sofiya/char/laptopconcurrency'
 datasets_dir = '/media/sofiya/Samsung_T5/'
 
-prepend = "laptopconcurrency" # Optional prepend to results folder
+prepend = "" # Optional prepend to results folder
 systems = [
     ['orbslam3', '/home/sofiya/char/ORB_SLAM3'],
     #['kimera', '/home/sofiya/char/kimera_workspace'],
@@ -15,11 +15,11 @@ datasets = [
     #['euroc', ['MH_01_easy', 'MH_02_easy', 'MH_03_medium', 'MH_04_difficult', 'MH_05_difficult', 'V1_01_easy', 'V1_02_medium', 'V1_03_difficult', 'V2_01_easy', 'V2_02_medium', 'V2_03_difficult']]
     # ['hilti', ['exp06_construction_upper_level_3', 'exp16_attic_to_upper_gallery_2', 'exp10_cupola_2', 'exp18_corridor_lower_gallery_2', 'exp14_basement_2']]
 ]
-frame_rates = [1, 0.75, 0.5, 0.25]
+frame_rates = [1, .75, .5, .25]
 multiple_repeat = 1
 orbslam_types = [
     #"Stereo_Inertial", "Stereo", "Mono", "Mono_Inertial"
-    "Mono"
+    "Stereo_Inertial"
 ]
 
 # To loop through these, go down to the for loop at the bottom
@@ -91,11 +91,11 @@ def run(slam_msckf_features="", orbslam_type="Stereo_Inertial", prepend=""):
                         time.sleep(5)
 
                         # Kill system after rosbag is done
-                        system_proc.send_signal(signal.SIGINT)
                         cpumem_proc.send_signal(signal.SIGKILL)
+                        system_proc.send_signal(signal.SIGINT)
                         time.sleep(5) # Give some time to shut down
-                        outs, errs = system_proc.communicate()
                         outs, errs = cpumem_proc.communicate()
+                        outs, errs = system_proc.communicate()
 
                         # Move results to the right directory
                         subprocess.run(shlex.split('mkdir {}'.format(final_results_dir))) # Make directory 
@@ -107,7 +107,7 @@ def run(slam_msckf_features="", orbslam_type="Stereo_Inertial", prepend=""):
 
 for orbslam_type in orbslam_types:
     print("!!!!!!!!!!!!!!!!!!!!!!!!", orbslam_type)
-    run(slam_msckf_features, orbslam_type, "{}_[{}]".format(prepend, orbslam_type))
+    run(slam_msckf_features, orbslam_type, "[{}]".format(prepend, orbslam_type))
 
 # Below code is to run the msckf vs. slam features experiments for openvins
 # for max_slam in range(0, 101, 25):
