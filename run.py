@@ -19,8 +19,7 @@ frame_rates = [1, .75, .5, .25]
 multiple_repeat = 1
 orbslam_types = [
     #"Stereo_Inertial", "Stereo", "Mono", "Mono_Inertial"
-    "Mono"
-    #"Stereo_Inertial"
+    "Mono", "Stereo_Inertial"
 ]
 
 # To loop through these, go down to the for loop at the bottom
@@ -65,17 +64,14 @@ def run(slam_msckf_features="", orbslam_type="Stereo_Inertial", prepend=""):
                             system_cmd = 'rosrun ORB_SLAM3 {} {}/Vocabulary/ORBvoc.txt {}/Examples/{} {}'.format(orbslam_type, system_dir, system_dir, orbslam_calib_file_location, do_rectify)
                             save_cmd = 'mv KeyFrameTrajectory_TUM_Format.txt FrameTrajectory_KITTI_Format.txt FrameTrajectory_TUM_Format.txt CameraTrajectory.txt KeyFrameTrajectory.txt output.txt cpumem.txt {}'.format(final_results_dir)
                             #connectivity.txt connectivity_all.txt 
-                            cpumem_cmd = "./top-memcpu.sh \"ORB_SLAM3\" cpumem.txt"
                         elif system_name == "kimera":
                             parallel = "parallel"
                             system_cmd = 'roslaunch kimera_vio_ros kimera_vio_ros_{}.launch log_output_path:={}/results'.format(dataset_name, system_dir)
                             save_cmd = 'mv {}/results/output_frontend_stats.csv {}/results/traj_vio.csv {}/results/traj_pgo.csv output.txt connectivity.dot connectivity_acceptable_factors.txt connectivity_lcd_factors.txt connectivity_rpgo.dot cpumem.txt {}'.format(system_dir, system_dir, system_dir, final_results_dir)
-                            cpumem_cmd = "./top-memcpu.sh \"kimera_vio_ros\" cpumem.txt"
                         elif system_name == "openvins":
                             parallel = "4threads"
                             system_cmd = "roslaunch ov_msckf subscribe.launch config:={}_mav dosave:=true path_est:={}/results/trajectory.txt dotime:=true path_time:={}/results/time_provided.txt {}".format(dataset_name, system_dir, system_dir, slam_msckf_features)
                             save_cmd = 'mv {}/results/trajectory.txt {}/results/time_provided.txt output.txt cpumem.txt {}'.format(system_dir, system_dir, final_results_dir)
-                            cpumem_cmd = "./top-memcpu.sh \"ov_msckf\" cpumem.txt"
 
                         print("PLAYING... {} {} fps multiplier={}".format(system_name, short_seq_name, frame_rate))
                         # Run system... nonblocking
@@ -84,7 +80,8 @@ def run(slam_msckf_features="", orbslam_type="Stereo_Inertial", prepend=""):
                         time.sleep(10) # Sleep to give system time to load vocabulary
 
                         # Measure CPU and memory ... nonblocking
-                        cpumem_proc = subprocess.Popen(shlex.split(cpumem_cmd), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        if system_name == "orbslam3":
+                            cpumem_proc = subprocess.Popen(shlex.split("./top-memcpu.sh \"[O]RB_SLAM3\" cpumem.txt"), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
                         # Run rosbag ... blocking
                         full_bag_path = os.path.join(datasets_dir, dataset_name, seq_name + ".bag")
@@ -94,10 +91,12 @@ def run(slam_msckf_features="", orbslam_type="Stereo_Inertial", prepend=""):
                         time.sleep(5)
 
                         # Kill system after rosbag is done
-                        cpumem_proc.send_signal(signal.SIGKILL)
+                        if system_name == "orbslam3":
+                            cpumem_proc.send_signal(signal.SIGKILL)
                         system_proc.send_signal(signal.SIGINT)
                         time.sleep(5) # Give some time to shut down
-                        outs, errs = cpumem_proc.communicate()
+                        if system_name == "orbslam3":
+                            outs, errs = cpumem_proc.communicate()
                         outs, errs = system_proc.communicate()
 
                         # Move results to the right directory

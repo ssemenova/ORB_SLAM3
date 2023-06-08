@@ -2,7 +2,7 @@
 ### Script Usage ###
 show_usage() {
     echo "This script extracts CPU and memory usage from top command for a specific process and redirect it to a sperate file."
-    echo -e "\nUsage:\n./top-memcpu.sh <iterations> <process-name> <output-filename>\n"
+    echo -e "\nUsage:\n./top-memcpu.sh <process-name> <output-filename>\n"
 }
 
 # check if number of arguments supplied is correct. If not, then display usage
@@ -33,18 +33,14 @@ fi
 echo "===== start ====="
 
 # Delete output file if it exists
-[ -e $2 ] && rm -v -- $3
+[ -e $2 ] && rm -v -- $2
 
 while [ true ]
 do
-    # Output
-    echo "collect-mem-cpu count: $i"
-
-    # Measurements
     # Timestamp in milliseconds
     timestamp="$(date +%s%N | cut -b1-13)"
     echo "time,$timestamp" >> $2
-    COLUMNS=512 top -c -b -n 1 | grep -Ei "[%]CPU|[%]MEM|[K]iB|[R]GBD .*config" >> $2
+    COLUMNS=512 top -c -b -n 1 | grep -Ei "$1" >> $2
 
     # Sleep one second
     sleep 1s
