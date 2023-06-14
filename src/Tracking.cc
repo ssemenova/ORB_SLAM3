@@ -1739,7 +1739,7 @@ void Tracking::PreintegrateIMU()
         pImuPreintegratedFromLastFrame->IntegrateNewMeasurement(acc,angVel,tstep);
         //std::cout(acc[0]);
     }
-    pImuPreintegratedFromLastFrame->printMeasurements();
+    //pImuPreintegratedFromLastFrame->printMeasurements();
 
     mCurrentFrame.mpImuPreintegratedFrame = pImuPreintegratedFromLastFrame;
     mCurrentFrame.mpImuPreintegrated = mpImuPreintegratedFromLastKF;
