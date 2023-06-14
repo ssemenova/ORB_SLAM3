@@ -48,7 +48,7 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer,
     mpFrameDrawer(pFrameDrawer), mpMapDrawer(pMapDrawer), mpAtlas(pAtlas), mnLastRelocFrameId(0), time_recently_lost(5.0),
     mnInitialFrameId(0), mbCreatedMap(false), mnFirstFrameId(0), mpCamera2(nullptr), mpLastKeyFrame(static_cast<KeyFrame*>(NULL))
 {
-    jacob_stream.open("/home/jacob/orbslam_data/tracking.txt", std::ofstream::app); // TODO JACOB make filename change each run
+    jacob_stream.open("../../../orbslam_data/tracking.txt", std::ofstream::app); // TODO JACOB make filename change each run
 
     // Load camera parameters from settings file
     if(settings){
