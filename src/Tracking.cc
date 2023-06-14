@@ -48,7 +48,7 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer,
     mpFrameDrawer(pFrameDrawer), mpMapDrawer(pMapDrawer), mpAtlas(pAtlas), mnLastRelocFrameId(0), time_recently_lost(5.0),
     mnInitialFrameId(0), mbCreatedMap(false), mnFirstFrameId(0), mpCamera2(nullptr), mpLastKeyFrame(static_cast<KeyFrame*>(NULL))
 {
-    jacob_stream.open("/home/sofiya/char/ORB_SLAM3/tracking.txt", std::ofstream::app); // TODO JACOB change filename
+    jacob_stream.open("/home/jacob/orbslam_data/tracking.txt", std::ofstream::app); // TODO JACOB make filename change each run
 
     // Load camera parameters from settings file
     if(settings){
@@ -1805,7 +1805,6 @@ bool Tracking::PredictStateIMU()
         const float t12 = mCurrentFrame.mpImuPreintegratedFrame->dT;
 
 
-        //TODO Jacob pull this code into preintegration step and print it out
         Eigen::Matrix3f Rwb2 = IMU::NormalizeRotation(Rwb1 * mCurrentFrame.mpImuPreintegratedFrame->GetDeltaRotation(mLastFrame.mImuBias));
         Eigen::Vector3f twb2 = twb1 + Vwb1*t12 + 0.5f*t12*t12*Gz+ Rwb1 * mCurrentFrame.mpImuPreintegratedFrame->GetDeltaPosition(mLastFrame.mImuBias);
         Eigen::Vector3f Vwb2 = Vwb1 + t12*Gz + Rwb1 * mCurrentFrame.mpImuPreintegratedFrame->GetDeltaVelocity(mLastFrame.mImuBias);

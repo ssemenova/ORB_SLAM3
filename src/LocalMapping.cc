@@ -797,7 +797,7 @@ void LocalMapping::CreateNewMapPoints()
     }    
 
     std::ofstream jacob_stream;
-    jacob_stream.open("/home/sofiya/char/ORB_SLAM3/localmapping.txt", std::ofstream::app); // TODO JACOB change filename
+    jacob_stream.open("/home/jacob/orbslam_data/localmapping.txt", std::ofstream::app); // TODO JACOB  make filename change each run
     jacob_stream << "CreateNewMapPoints," << mpCurrentKeyFrame->mnId << "," << new_mappoints << std::endl;
 }
 
