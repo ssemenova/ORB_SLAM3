@@ -783,6 +783,7 @@ namespace ORB_SLAM3
         allKeypoints.resize(nlevels);
 
         const float W = 35;
+        int count = 0;
 
         for (int level = 0; level < nlevels; ++level)
         {
@@ -877,6 +878,8 @@ namespace ORB_SLAM3
             keypoints = DistributeOctTree(vToDistributeKeys, minBorderX, maxBorderX,
                                           minBorderY, maxBorderY,mnFeaturesPerLevel[level], level);
 
+            count += vToDistributeKeys.size();
+
             const int scaledPatchSize = PATCH_SIZE*mvScaleFactor[level];
 
             // Add border to coordinates and scale information
@@ -893,6 +896,8 @@ namespace ORB_SLAM3
         // compute orientations
         for (int level = 0; level < nlevels; ++level)
             computeOrientation(mvImagePyramid[level], allKeypoints[level], umax);
+
+        cout << "Jacob,ComputeKeyPointsOctTree size," << count << endl;
     }
 
     void ORBextractor::ComputeKeyPointsOld(std::vector<std::vector<KeyPoint> > &allKeypoints)
@@ -1165,7 +1170,9 @@ namespace ORB_SLAM3
                 i++;
             }
         }
-        //cout << "[ORBextractor]: extracted " << _keypoints.size() << " KeyPoints" << endl;
+        // cout << "[ORBextractor]: extracted " << _keypoints.size() << " KeyPoints" << endl;
+
+        cout << "Jacob,ORBExtractor extracted," << _keypoints.size() << endl;
         return monoIndex;
     }
 
